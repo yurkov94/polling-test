@@ -1,6 +1,4 @@
-# fullstack-code-test
-
-KRY code assignment:
+# KRY code assignment
 
 One of our developers built a simple service poller.
 The service consists of a backend service that keeps a list of services, and periodically checks if they are up or down.
@@ -19,10 +17,3 @@ Spend maximum two hours working on these issues - if you can solve all of them, 
 If you cannot finish all of them, try to finish the ones you start.
 
 Good luck!
-
-== Building
-
-To run your application:
-```
-./gradlew clean run
-```
