@@ -17,3 +17,15 @@ Spend maximum two hours working on these issues - if you can solve all of them, 
 If you cannot finish all of them, try to finish the ones you start.
 
 Good luck!
+
+# Building
+We recommend using IntelliJ as it's what we use day to day.
+In intelliJ, choose
+```
+New -> New from existing sources -> Import project from external model -> Gradle
+```
+
+You can also run gradle directly from the command line:
+```
+./gradlew clean run
+```
