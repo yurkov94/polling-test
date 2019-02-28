@@ -1,13 +1,14 @@
 # KRY code assignment
 
 One of our developers built a simple service poller.
-The service consists of a backend service that keeps a list of services, and periodically checks if they are up or down.
+The service consists of a backend service that keeps a list of services (defined by a URL), and periodically does a HTTP GET to each and saves the response ("OK" or "FAIL").
 
 Unfortunately, the original developer din't finish the job, and it's now up to you to complete the thing.
 In the backlog are the following issues:
 
 - Whenever the server is restarted, any added services disappear
-- There's no way to DELETE individual services
+- Service URL's are not validated in any way ("sdgf" is _not_ up)
+- There's no way to delete individual services
 - The poller doesn't actually work
 - The frontend needs some work
 - Simultaneous writes sometimes causes strange behavior
@@ -19,7 +20,7 @@ If you cannot finish all of them, try to finish the ones you start.
 Good luck!
 
 # Building
-We recommend using IntelliJ as it's what we use day to day.
+We recommend using IntelliJ as it's what we use day to day at the KRY office.
 In intelliJ, choose
 ```
 New -> New from existing sources -> Import project from external model -> Gradle
