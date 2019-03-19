@@ -23,6 +23,7 @@ Backend track
 - Simultaneous writes sometimes causes strange behavior
 - Protect the poller from misbehaving services (for example answering really slowly)
 - Service URL's are not validated in any way ("sdgf" is probably not a valid service)
+- A user (with a different cookie/local storage) should not see the services added by another user
 
 Spend maximum four hours working on this assignment - make sure to finish the issues you start.
 
