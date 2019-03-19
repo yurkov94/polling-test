@@ -8,10 +8,8 @@ import java.util.Random;
 
 public class BackgroundPoller {
 
-  private Random random = new Random();
-
   public Future<List<String>> pollServices(Map<String, String> services) {
-    services.forEach((url,status)-> services.put(url, random.nextBoolean() ? "OK" : "FAIL"));
-    return Future.succeededFuture();
+    //TODO
+    return Future.failedFuture("TODO");
   }
 }

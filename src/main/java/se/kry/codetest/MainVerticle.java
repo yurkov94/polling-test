@@ -21,6 +21,7 @@ public class MainVerticle extends AbstractVerticle {
   public void start(Future<Void> startFuture) {
     Router router = Router.router(vertx);
     router.route().handler(BodyHandler.create());
+    //TODO use db provider
     services.put("https://www.kry.se", "UNKNOWN");
     vertx.setPeriodic(1000 * 60, timerId -> poller.pollServices(services));
     setRoutes(router);
@@ -38,7 +39,7 @@ public class MainVerticle extends AbstractVerticle {
   }
 
   private void setRoutes(Router router){
-    router.route("/").handler(StaticHandler.create());
+    router.route("/*").handler(StaticHandler.create());
     router.get("/service").handler(req -> {
       List<JsonObject> jsonServices = services
           .entrySet()
