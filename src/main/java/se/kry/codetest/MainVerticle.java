@@ -15,13 +15,15 @@ import java.util.stream.Collectors;
 public class MainVerticle extends AbstractVerticle {
 
   private HashMap<String, String> services = new HashMap<>();
+  //TODO use this
+  private DBConnector connector;
   private BackgroundPoller poller = new BackgroundPoller();
 
   @Override
   public void start(Future<Void> startFuture) {
+    connector = new DBConnector(vertx);
     Router router = Router.router(vertx);
     router.route().handler(BodyHandler.create());
-    //TODO use db provider
     services.put("https://www.kry.se", "UNKNOWN");
     vertx.setPeriodic(1000 * 60, timerId -> poller.pollServices(services));
     setRoutes(router);
