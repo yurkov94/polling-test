@@ -35,7 +35,7 @@ Good luck!
 We recommend using IntelliJ as it's what we use day to day at the KRY office.
 In intelliJ, choose
 ```
-New -> New from existing sources -> Import project from external model -> Gradle
+New -> New from existing sources -> Import project from external model -> Gradle -> select "use gradle wrapper configuration"
 ```
 
 You can also run gradle directly from the command line:
