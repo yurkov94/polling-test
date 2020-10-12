@@ -1,97 +1,43 @@
 package se.kry.codetest;
 
-import com.mchange.v2.lang.StringUtils;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.Router;
-import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.BodyHandler;
-import io.vertx.ext.web.handler.StaticHandler;
+import se.kry.codetest.cache.ServicesCache;
+import se.kry.codetest.datasource.DBConnectorVerticle;
+import se.kry.codetest.http.HttpServerVerticle;
+import se.kry.codetest.service.UrlService;
 
-import java.util.HashMap;
 import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import static se.kry.codetest.datasource.DBConnectorVerticle.DBCONNECTOR_QUEUE;
 
 public class MainVerticle extends AbstractVerticle {
 
-  private HashMap<String, String> services = new HashMap<>();
-  //TODO use this
-  private DBConnector connector;
-  private BackgroundPoller poller = new BackgroundPoller();
-
-  private static final String NOT_FOUND_ERROR_MESSAGE = "There is no service with url %s";
-  private static final String STATUS_OK = "OK";
-  private static final String STATUS_ERROR = "Error";
-
-
   @Override
   public void start(Future<Void> startFuture) {
-    connector = new DBConnector(vertx);
-    Router router = Router.router(vertx);
-    router.route().handler(BodyHandler.create());
-    services.put("https://www.kry.se", "UNKNOWN");
-    vertx.setPeriodic(1000 * 60, timerId -> poller.pollServices(services));
-    setRoutes(router);
-    vertx
-        .createHttpServer()
-        .requestHandler(router)
-        .listen(8080, result -> {
-          if (result.succeeded()) {
-            System.out.println("KRY code test service started");
-            startFuture.complete();
-          } else {
-            startFuture.fail(result.cause());
-          }
-        });
+    Future<String> dbVerticleDeployment = Future.future();
+    vertx.deployVerticle(new DBConnectorVerticle(), dbVerticleDeployment);
+
+    dbVerticleDeployment.compose(r -> {
+      UrlService urlService = UrlService.createProxy(vertx, DBCONNECTOR_QUEUE);
+      Future<List<JsonArray>> services = Future.future();
+      urlService.fetchAllServices(services);
+      return services.compose(s -> {
+        Future<String> httpVerticleDeployment = Future.future();
+        ServicesCache servicesCache = new ServicesCache(s.stream().collect(Collectors.toMap(this::getNameFromJsonArray, Function.identity())));
+        vertx.deployVerticle(new HttpServerVerticle(servicesCache), httpVerticleDeployment);
+        return httpVerticleDeployment;
+      });
+    });
   }
 
-  private void setRoutes(Router router){
-    router.route("/*").handler(StaticHandler.create());
-    router.get("/service").handler(this::listServiceHandler);
-    router.post("/service").handler(this::newServiceHandler);
-    router.delete("/service").handler(this::deleteServiceHandler);
+  private String getNameFromJsonArray(JsonArray array) {
+    return array.getString(0);
   }
 
-  private void listServiceHandler(RoutingContext req) {
-    List<JsonObject> jsonServices = services
-            .entrySet()
-            .stream()
-            .map(service ->
-                    new JsonObject()
-                            .put("name", service.getKey())
-                            .put("status", service.getValue()))
-            .collect(Collectors.toList());
-    req.response()
-            .putHeader("content-type", "application/json")
-            .end(new JsonArray(jsonServices).encode());
-  }
-
-  private void newServiceHandler(RoutingContext req) {
-    JsonObject jsonBody = req.getBodyAsJson();
-    // TODO validation
-    services.put(jsonBody.getString("url"), "UNKNOWN");
-    req.response()
-            .putHeader("content-type", "text/plain")
-            .end(STATUS_OK);
-  }
-
-  private void deleteServiceHandler(RoutingContext req) {
-    JsonObject jsonBody = req.getBodyAsJson();
-    String key = jsonBody.getString("url");
-    if (StringUtils.nonEmptyString(key) && services.containsKey(key)) {
-      services.remove(key);
-      req.response()
-              .setStatusCode(200)
-              .end(STATUS_OK);
-    } else {
-      req.response()
-              .setStatusCode(400)
-              .setStatusMessage(String.format(NOT_FOUND_ERROR_MESSAGE, key))
-              .end(STATUS_ERROR);;
-    }
-  }
 }
 
 
