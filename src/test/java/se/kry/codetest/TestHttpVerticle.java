@@ -2,6 +2,7 @@ package se.kry.codetest;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
@@ -10,17 +11,21 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import se.kry.codetest.cache.ServicesCache;
+import se.kry.codetest.http.HttpServerVerticle;
 
+import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @ExtendWith(VertxExtension.class)
-public class TestMainVerticle {
+public class TestHttpVerticle {
 
   @BeforeEach
   void deploy_verticle(Vertx vertx, VertxTestContext testContext) {
-    vertx.deployVerticle(new MainVerticle(), testContext.succeeding(id -> testContext.completeNow()));
+    vertx.deployVerticle(new HttpServerVerticle(new ServicesCache(new HashMap<>())),
+            testContext.succeeding(id -> testContext.completeNow()));
   }
 
   @Test
@@ -31,7 +36,7 @@ public class TestMainVerticle {
         .get(8080, "::1", "/service")
         .send(response -> testContext.verify(() -> {
           assertEquals(200, response.result().statusCode());
-          JsonArray body = response.result().bodyAsJsonArray();
+          JsonObject body = response.result().bodyAsJsonObject();
           assertEquals(1, body.size());
           testContext.completeNow();
         }));
