@@ -25,4 +25,8 @@ public class ServicesCache {
     public void removeService(String name) {
         cachedServices.remove(name);
     }
+
+    public boolean contains(String name) {
+        return cachedServices.containsKey(name);
+    }
 }

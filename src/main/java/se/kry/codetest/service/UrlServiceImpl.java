@@ -17,10 +17,11 @@ public class UrlServiceImpl implements UrlService {
     private static final Logger LOGGER = LoggerFactory.getLogger(UrlServiceImpl.class);
     private final SQLClient dbClient;
 
-    private static final String SQL_INIT_TABLES = "CREATE TABLE IF NOT EXISTS service (id INTEGER NOT NULL PRIMARY KEY, url VARCHAR(128) NOT NULL, name VARCHAR(128) NOT NULL UNIQUE, created INTEGER NOT NULL)";
-    private static final String SQL_SELECT_SERVICES = "SELECT name, url, created FROM service";
-    private static final String SQL_INSERT_NEW_SERVICE = "INSERT INTO service (name, url, created) VALUES (?, ?, ?)";
+    private static final String SQL_INIT_TABLES = "CREATE TABLE IF NOT EXISTS service (id INTEGER NOT NULL PRIMARY KEY, host VARCHAR(128) NOT NULL, port INTEGER NOT NULL, name VARCHAR(128) NOT NULL UNIQUE, created INTEGER NOT NULL, status VARCHAR(5) NOT NULL)";
+    private static final String SQL_SELECT_SERVICES = "SELECT name, host, port, created, status FROM service";
+    private static final String SQL_INSERT_NEW_SERVICE = "INSERT INTO service (name, host, port, created, status) VALUES (?, ?, ?, ?, ?)";
     private static final String SQL_DELETE_SERVICE = "DELETE FROM service WHERE name = ?";
+    private static final String SQL_UPDATE_SERVICE_STATUS = "UPDATE service SET status = ? WHERE name = ?";
 
     public UrlServiceImpl(SQLClient dbClient, Handler<AsyncResult<UrlService>> readyHandler) {
         this.dbClient = dbClient;
@@ -58,11 +59,13 @@ public class UrlServiceImpl implements UrlService {
     }
 
     @Override
-    public UrlService addService(String name, String url, Handler<AsyncResult<JsonArray>> resultHandler) {
+    public UrlService addService(String name, String host, Integer port, Handler<AsyncResult<JsonArray>> resultHandler) {
         JsonArray data = new JsonArray()
                 .add(name)
-                .add(url)
-                .add(new Date().getTime());
+                .add(host)
+                .add(port)
+                .add(new Date().getTime())
+                .add(ServiceStatus.DEAD);
         dbClient.updateWithParams(SQL_INSERT_NEW_SERVICE, data, res -> {
             if (res.succeeded()) {
                 resultHandler.handle(Future.succeededFuture(data));
@@ -81,8 +84,15 @@ public class UrlServiceImpl implements UrlService {
         return this;
     }
 
-    private void execQuery(Handler<AsyncResult<Void>> resultHandler, JsonArray data, String sqlDeleteService) {
-        dbClient.updateWithParams(sqlDeleteService, data, res -> {
+    @Override
+    public UrlService updateStatus(String name, ServiceStatus status, Handler<AsyncResult<Void>> resultHandler) {
+        JsonArray data = new JsonArray().add(status).add(name);
+        execQuery(resultHandler, data, SQL_UPDATE_SERVICE_STATUS);
+        return this;
+    }
+
+    private void execQuery(Handler<AsyncResult<Void>> resultHandler, JsonArray data, String sqlQuery) {
+        dbClient.updateWithParams(sqlQuery, data, res -> {
             if (res.succeeded()) {
                 resultHandler.handle(Future.succeededFuture());
             } else {

@@ -18,10 +18,13 @@ public interface UrlService {
     UrlService fetchAllServices(Handler<AsyncResult<List<JsonArray>>> resultHandler);
 
     @Fluent
-    UrlService addService(String name, String url, Handler<AsyncResult<JsonArray>> resultHandler);
+    UrlService addService(String name, String host, Integer port, Handler<AsyncResult<JsonArray>> resultHandler);
 
     @Fluent
     UrlService deleteService(String name, Handler<AsyncResult<Void>> resultHandler);
+
+    @Fluent
+    UrlService updateStatus(String name, ServiceStatus status, Handler<AsyncResult<Void>> resultHandler);
 
     @GenIgnore
     static UrlService create(SQLClient dbClient, Handler<AsyncResult<UrlService>> readyHandler) {

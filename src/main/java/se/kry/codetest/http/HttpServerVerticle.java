@@ -9,7 +9,6 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.StaticHandler;
-import se.kry.codetest.BackgroundPoller;
 import se.kry.codetest.cache.ServicesCache;
 import se.kry.codetest.service.UrlService;
 
@@ -22,7 +21,6 @@ public class HttpServerVerticle extends AbstractVerticle {
 
     private UrlService urlService;
     private ServicesCache servicesCache;
-    private BackgroundPoller poller = new BackgroundPoller(); // todo create service + proxy
 
     private static final String NOT_FOUND_ERROR_MESSAGE = "There is no service with name %s";
     private static final String STATUS_OK = "OK";
@@ -38,7 +36,6 @@ public class HttpServerVerticle extends AbstractVerticle {
         urlService = UrlService.createProxy(vertx, DBCONNECTOR_QUEUE);
         Router router = Router.router(vertx);
         router.route().handler(BodyHandler.create());
-        vertx.setPeriodic(1000 * 60, timerId -> poller.pollServices(servicesCache.getCachedServices()));
         setRoutes(router);
         vertx
             .createHttpServer()
@@ -65,8 +62,10 @@ public class HttpServerVerticle extends AbstractVerticle {
                 servicesCache.getCachedServices().stream().map(element -> {
                     JsonObject service = new JsonObject();
                     service.put("name", element.getString(0));
-                    service.put("url", element.getString(1));
-                    service.put("created", new Timestamp(element.getLong(2)).toString());
+                    service.put("host", element.getString(1));
+                    service.put("port", element.getInteger(2));
+                    service.put("created", new Timestamp(element.getLong(3)).toString());
+                    service.put("status", element.getString(4));
                     return service;
                 }).collect(Collectors.toList()));
             req.response()
@@ -76,9 +75,24 @@ public class HttpServerVerticle extends AbstractVerticle {
 
     private void newServiceHandler(RoutingContext req) {
         JsonObject jsonBody = req.getBodyAsJson();
-        // TODO validation
         Future<JsonArray> newServiceFuture = Future.future();
-        urlService.addService(jsonBody.getString("name"), jsonBody.getString("url"), newServiceFuture);
+        String url = jsonBody.getString("url");
+        String host;
+        int port;
+        if (url.startsWith("http://")) {
+            host = url.substring(7);
+            port = 80;
+        } else if (url.startsWith("https://")) {
+            host = url.substring(8);
+            port = 443;
+        } else {
+            req.response()
+                    .putHeader("content-type", "text/plain")
+                    .setStatusCode(400)
+                    .end(STATUS_ERROR);
+            return;
+        }
+        urlService.addService(jsonBody.getString("name"), host, port, newServiceFuture);
         newServiceFuture.compose(r -> {
             servicesCache.putService(r.getString(0), r);
             req.response()
@@ -91,7 +105,7 @@ public class HttpServerVerticle extends AbstractVerticle {
     private void deleteServiceHandler(RoutingContext req) {
         JsonObject jsonBody = req.getBodyAsJson();
         String name = jsonBody.getString("name");
-        if (StringUtils.nonEmptyString(name)) {
+        if (StringUtils.nonEmptyString(name) && servicesCache.contains(name)) {
             Future<Void> deleteServiceFuture = Future.future();
             urlService.deleteService(name, deleteServiceFuture);
             deleteServiceFuture.compose(r -> {
