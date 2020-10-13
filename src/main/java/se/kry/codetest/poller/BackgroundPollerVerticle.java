@@ -32,7 +32,7 @@ public class BackgroundPollerVerticle extends AbstractVerticle {
     webClient = WebClient.create(vertx, new WebClientOptions()
             .setTrustAll(true));
     urlService = UrlService.createProxy(vertx, DBCONNECTOR_QUEUE);
-    vertx.setPeriodic(1000 * 5, timerId -> this.pollServices());
+    vertx.setPeriodic(1000 * 60, timerId -> this.pollServices());
   }
 
   private void pollServices() {

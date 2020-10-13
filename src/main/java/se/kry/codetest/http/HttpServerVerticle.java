@@ -23,6 +23,7 @@ public class HttpServerVerticle extends AbstractVerticle {
     private ServicesCache servicesCache;
 
     private static final String NOT_FOUND_ERROR_MESSAGE = "There is no service with name %s";
+    private static final String SERVICE_ALREADY_EXISTS_ERROR_MESSAGE = "Service with name %s already exists";
     private static final String STATUS_OK = "OK";
     private static final String STATUS_ERROR = "Error";
 
@@ -82,9 +83,6 @@ public class HttpServerVerticle extends AbstractVerticle {
         if (url.startsWith("http://")) {
             host = url.substring(7);
             port = 80;
-        } else if (url.startsWith("https://")) {
-            host = url.substring(8);
-            port = 443;
         } else {
             req.response()
                     .putHeader("content-type", "text/plain")
@@ -92,6 +90,15 @@ public class HttpServerVerticle extends AbstractVerticle {
                     .end(STATUS_ERROR);
             return;
         }
+        String serviceName = jsonBody.getString("name");
+        if (servicesCache.contains(serviceName)) {
+            req.response()
+                    .setStatusCode(400)
+                    .setStatusMessage(String.format(SERVICE_ALREADY_EXISTS_ERROR_MESSAGE, serviceName))
+                    .end(STATUS_ERROR);
+            return;
+        }
+
         urlService.addService(jsonBody.getString("name"), host, port, newServiceFuture);
         newServiceFuture.compose(r -> {
             servicesCache.putService(r.getString(0), r);
@@ -122,5 +129,4 @@ public class HttpServerVerticle extends AbstractVerticle {
                     .end(STATUS_ERROR);
         }
     }
-
 }
